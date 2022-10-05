@@ -1,6 +1,5 @@
 from turtle import update
 import pygame
-from datetime import datetime
 pygame.font.init()
 from enum import Enum, auto
 
@@ -12,12 +11,6 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
 TEXT_FONT = pygame.font.SysFont('comicsans', 25)
 FPS = 60
 
-
-MONSTER_LOCATION = (WIDTH//2, HEIGHT//2)
-MONSTER_SIZE = (100,100)
-
-HEALTH_BAR_LOCATION = (WIDTH//2-100, HEIGHT//2+200)
-HEALTH_BAR_SIZE = (800,70)
 
 
 # colors
@@ -39,43 +32,34 @@ class ButtonAction(Enum):
     NotClicked = auto()
 
 
-class HealthBar():
-
-    def __init__(self, health, scale=1):
-        self.starting = health
-        self.current = self.starting
-        self.Background = pygame.Rect(HEALTH_BAR_LOCATION[0], HEALTH_BAR_LOCATION[1], HEALTH_BAR_SIZE[0], HEALTH_BAR_SIZE[1])
-        self.Bar = pygame.Rect(HEALTH_BAR_LOCATION[0], HEALTH_BAR_LOCATION[1], HEALTH_BAR_SIZE[0], HEALTH_BAR_SIZE[1])
-
-    def Damage(self, amount):
-        self.current = int(self.current - amount)
-        AdjustedWidth = int(self.current/self.starting * HEALTH_BAR_SIZE[0])
-        self.Bar = pygame.Rect(HEALTH_BAR_LOCATION[0], HEALTH_BAR_LOCATION[1], AdjustedWidth, HEALTH_BAR_SIZE[1])
-
-    def draw(self):
-        pygame.draw.rect(screen, BLACK, self.Background, 5)
-        pygame.draw.rect(screen, RED, self.Bar)
-        button_text = TEXT_FONT.render(str(self.current), 1, BLACK)
-        screen.blit(button_text, (HEALTH_BAR_LOCATION[0], HEALTH_BAR_LOCATION[1]))
-
 class Monster():
 
-    def __init__(self, health):
-        self.rect = pygame.Rect(MONSTER_LOCATION[0], MONSTER_LOCATION[1], MONSTER_SIZE[0], MONSTER_SIZE[1])
+    x_pos, y_pos = (int(WIDTH*0.75), int(HEIGHT*0.23))
+    width, height = int(WIDTH*0.26), int(HEIGHT*0.46)
+
+    def __init__(self, name, health):
+        self.name = name
+        self.hitbox_rect = pygame.Rect(Monster.x_pos-Monster.width//2, Monster.y_pos, Monster.width, Monster.height)
         self.health = health
         self.clicked = False
+        self.healthbar = HealthBar(self.health)
 
     def Damage(self, amount):
         self.health = int(self.health - amount)
+        self.healthbar.CurrentHealth(self.health)
 
     def draw(self):
+        self.healthbar.draw()
+        name_text = TEXT_FONT.render(f"{self.name}", 1, BLACK)
+        screen.blit(name_text, (Monster.x_pos-name_text.get_width()//2, Monster.y_pos-name_text.get_height()))
+
         if self.clicked:
-            pygame.draw.rect(screen,YELLOW, self.rect)
+            pygame.draw.rect(screen,YELLOW, self.hitbox_rect, 8, border_radius=10)
         else:
-            pygame.draw.rect(screen,BLACK, self.rect)
+            pygame.draw.rect(screen,BLACK, self.hitbox_rect, 8, border_radius=10)
 
         action = ButtonAction.NotClicked
-        if self.rect.collidepoint(pygame.mouse.get_pos()):
+        if self.hitbox_rect.collidepoint(pygame.mouse.get_pos()):
             if pygame.mouse.get_pressed()[0] and self.clicked == False:
                 self.clicked = True
                 action = ButtonAction.Clicked
@@ -83,73 +67,27 @@ class Monster():
             self.clicked = False
         return action  
 
-class Game():
+class HealthBar():
 
-    def __init__(self):
-        self.damagePerSecond = 0
-        self.damagePerClick = 400
-        self.money = 0
-        self.level = 0
-        self.reward = 1_000
+    x_pos, y_pos = (int(WIDTH*0.75), int(HEIGHT*0.23) + Monster.height)
+    width, height = int(WIDTH*0.26), int(HEIGHT*0.11)
 
-        self.health = 5_000
-        self.HealthBar = HealthBar(self.health)
-        self.monster = Monster(self.health)
+    def __init__(self, health):
+        self.starting = health
+        self.current = self.starting
+        self.Background = pygame.Rect(HealthBar.x_pos-HealthBar.width//2, HealthBar.y_pos, HealthBar.width, HealthBar.height)
+        self.Bar = pygame.Rect(HealthBar.x_pos-HealthBar.width//2, HealthBar.y_pos, HealthBar.width, HealthBar.height)
 
-
-        self.test = Book()
-
-
-    def NextMonster(self):
-        if self.monster.health <= 0:
-            self.health = int(self.health * 1.2)
-            self.HealthBar = HealthBar(self.health)
-            self.monster = Monster(self.health)
-            self.money += self.reward
-            self.reward = int(self.reward * 1.01)
-            self.level += 1           
-
-    def IncreaseDPS(self, amount):
-        self.damagePerSecond += amount
-
-    def IncreaseDPC(self, amount):
-        self.damagePerClick += amount
-
-    def DamageMonsterPerSecond(self):
-        self.monster.Damage(self.damagePerSecond/FPS)
-        self.HealthBar.Damage(self.damagePerSecond/FPS)
-
-    def DamageMonsterClick(self):
-        self.monster.Damage(self.damagePerClick)
-        self.HealthBar.Damage(self.damagePerClick)
-
+    def CurrentHealth(self, health):
+        self.current = health
+        AdjustedWidth = int(self.current/self.starting * HealthBar.width)
+        self.Bar = pygame.Rect(HealthBar.x_pos-HealthBar.width//2, HealthBar.y_pos, AdjustedWidth, HealthBar.height)
 
     def draw(self):
-        screen.fill(WHITE)
-
-        button_text = TEXT_FONT.render("DPS: " + str(self.damagePerSecond), 1, BLACK)
-        screen.blit(button_text, (WIDTH//2, (button_text.get_height())))
-        button_text = TEXT_FONT.render("DPC: " + str(self.damagePerClick), 1, BLACK)
-        screen.blit(button_text, (WIDTH//2, (50 + button_text.get_height())))
-        button_text = TEXT_FONT.render("GOLD: " + str(self.money), 1, BLACK)
-        screen.blit(button_text, (WIDTH//2, (100 + button_text.get_height())))
-        button_text = TEXT_FONT.render("Level: " + str(self.level), 1, BLACK)
-        screen.blit(button_text, (WIDTH//2, (150 + button_text.get_height())))
-       
-
-        action = self.monster.draw()
-        if action == ButtonAction.Clicked:
-            self.DamageMonsterClick()       
-
-
-        self.DamageMonsterPerSecond()
-
-        self.HealthBar.draw()
-        self.NextMonster()
-
-        money_spent, dps_increase = self.test.draw(self.money)
-        self.money -= money_spent
-        self.IncreaseDPS(dps_increase)
+        pygame.draw.rect(screen, RED, self.Bar, border_radius=10)
+        pygame.draw.rect(screen, BLACK, self.Background, 8, border_radius=10)
+        # button_text = TEXT_FONT.render(str(self.current), 1, BLACK)
+        # screen.blit(button_text, (HEALTH_BAR_LOCATION[0], HEALTH_BAR_LOCATION[1]))
             
 class Button():
 
@@ -173,18 +111,21 @@ class Button():
 
 class Book():
 
+    x_pos, y_pos = int(WIDTH*0.025), int(HEIGHT*0.05)
+    width, height = int(WIDTH*0.34), int(HEIGHT*0.74)
+
     def __init__(self):
         self.current_page = 0
-        self.nextbutton = Button(570, 880)
-        self.prevbutton = Button(100, 880)
+        self.nextbutton = Button(Book.x_pos + int(Book.width*0.9), Book.y_pos + int(Book.height*0.9))
+        self.prevbutton = Button(Book.x_pos + int(Book.width*0.1), Book.y_pos + int(Book.height*0.9))
         self.pages = [
-            Page(1, [("Water Ball", 1_000, 10),("Ice Ball", 10_000, 15),("Fire Ball", 100_000, 20),("Thunder Bolt", 1_000_000, 30),("Wind Blast", 100_000_000, 40)]),
-            Page(2, [("Rock Throw", 1_000, 100),("Heaven's Light", 10_000, 1_000),("Shadow Ball", 100_000, 10_000),("Water Spear", 1_000_000, 100_000),("Ice Spear", 100_000_000, 1_000)]),
-            Page(3, [("Rock Throw", 1_000, 100),("Heaven's Light", 10_000, 1_000),("Shadow Ball", 100_000, 10_000),("Water Spear", 1_000_000, 100_000),("Ice Spear", 100_000_000, 1_000)])
+            Page([("Water Ball", 1_000, 10),("Ice Ball", 10_000, 15),("Fire Ball", 100_000, 20),("Thunder Bolt", 1_000_000, 30)]),
+            Page([("Rock Throw", 1_000, 100),("Heaven's Light", 10_000, 1_000),("Shadow Ball", 100_000, 10_000),("Water Spear", 1_000_000, 100_000)]),
+            Page([("Ice Spear", 100_000_000, 1_000),("Wind Blast", 100_000_000, 40)])
         ]
 
     def draw(self, money):
-        money_spent, dps_increase = self.pages[self.current_page].draw(money)
+        money_spent, dps_increase = self.pages[self.current_page].draw(money, self.current_page+1)
         
         if self.current_page+1 < len(self.pages):
             action = self.nextbutton.draw()
@@ -201,17 +142,21 @@ class Book():
 
 class Page():
 
-    def __init__(self, page_number, spells):
-        x, y = 50, 50
-        self.page_number = page_number
-        self.page_rect = pygame.Rect(x, y, 620, len(spells)*160+110)
-        self.spells = [Upgrade(x+10, 10+y+160*index, name, dps, cost) for index, (name, dps, cost) in enumerate(spells)]
-            
+    x_pos, y_pos = int(WIDTH*0.025), int(HEIGHT*0.05)
+    width, height = int(WIDTH*0.34), int(HEIGHT*0.74)
+    max_spells = 4
 
-    def draw(self, money):
+    def __init__(self, spells):
+        self.page_rect = pygame.Rect(Page.x_pos, Page.y_pos, Page.width, Page.height)
+        x_padding = int(Page.width*0.05)
+        y_padding = int(Page.height*0.1)
+        spell_padding = int(Page.height*0.01)
+        self.spells = [Spell(Page.x_pos+x_padding, y_padding+Page.y_pos+(Spell.height+spell_padding)*index, name, dps, cost) for index, (name, dps, cost) in enumerate(spells)]
+
+    def draw(self, money, page):
         pygame.draw.rect(screen, GREY_3, self.page_rect, border_radius=10)
-        text = TEXT_FONT.render(f"PAGE: {self.page_number}", 1, BLACK)
-        screen.blit(text, (self.page_rect.x + (self.page_rect.width - text.get_width())//2, self.page_rect.y + self.page_rect.height-text.get_height()-50))
+        text = TEXT_FONT.render(f"PAGE: {page}", 1, BLACK)
+        screen.blit(text, (self.page_rect.x + (self.page_rect.width - text.get_width())//2, self.page_rect.y + text.get_height()))
 
         money_spent = 0
         dps_increase = 0
@@ -225,13 +170,14 @@ class Page():
 
         return(money_spent, dps_increase)
 
-class Upgrade():
+class Spell():
+
+    width, height = int(Page.width*0.9), int(Page.height*0.18)
+    button_width, button_height = int(width*.35), int(height*.7)
 
     def __init__(self, x, y, name='', dps=0, cost=0, dps_scale=1.05, cost_scale=1.01):
-        block_size = (600, 150)
-        upgrade_button_size = (200, 100)
-        self.block_rect = pygame.Rect(x, y, block_size[0], block_size[1])
-        self.button_rect = pygame.Rect(x + upgrade_button_size[0]//10, y + (block_size[1]-upgrade_button_size[1])//2, upgrade_button_size[0], upgrade_button_size[1])
+        self.block_rect = pygame.Rect(x, y, Spell.width, Spell.height)
+        self.button_rect = pygame.Rect(x + Spell.button_width//10, y + (Spell.height-Spell.button_height)//2, Spell.button_width, Spell.button_height)
 
         self.level = 0
         self.name = name
@@ -289,6 +235,70 @@ class Upgrade():
             self.clicked = False
         return action
 
+class Game():
+
+    def __init__(self):
+        self.damagePerSecond = 0
+        self.damagePerClick = 400
+        self.money = 0.0
+        self.level = 0
+        self.reward = 1_000
+
+        self.health = 5_000
+        self.monster = Monster('Bob',self.health)
+
+
+        self.test = Book()
+
+
+    def NextMonster(self):
+        if self.monster.health <= 0:
+            self.health = int(self.health * 1.2)
+            self.monster = Monster('Bob',self.health)
+            self.money += self.reward
+            self.reward = int(self.reward * 1.01)
+            self.level += 1           
+
+    def IncreaseDPS(self, amount):
+        self.damagePerSecond += amount
+
+    def IncreaseDPC(self, amount):
+        self.damagePerClick += amount
+
+    def DamageMonsterPerSecond(self):
+        self.monster.Damage(self.damagePerSecond/FPS)
+
+    def DamageMonsterClick(self):
+        self.monster.Damage(self.damagePerClick)
+
+
+    def draw(self):
+        screen.fill(WHITE)
+
+        dps_text = TEXT_FONT.render(f"DPS: {self.damagePerSecond:.0f}", 1, BLACK)
+        dpc_text = TEXT_FONT.render(f"DPC: {self.damagePerClick:.0f}", 1, BLACK)
+        gold_text = TEXT_FONT.render(f"GOLD: {self.money:.0f}", 1, BLACK)
+        
+        screen.blit(dps_text, (Book.x_pos, Book.y_pos + Book.height + dps_text.get_height()))
+        screen.blit(dpc_text, (Book.x_pos, Book.y_pos + Book.height + dps_text.get_height() + dpc_text.get_height()))
+        screen.blit(gold_text, (Book.x_pos, Book.y_pos + Book.height + dps_text.get_height() + dpc_text.get_height() + gold_text.get_height()))
+
+        level_text = TEXT_FONT.render(f"Level: {self.level}", 1, BLACK)
+        screen.blit(level_text, (int(WIDTH*0.75) - level_text.get_width()//2, 2*level_text.get_height()))
+       
+
+        action = self.monster.draw()
+        if action == ButtonAction.Clicked:
+            self.DamageMonsterClick()       
+
+
+        self.DamageMonsterPerSecond()
+
+        self.NextMonster()
+
+        money_spent, dps_increase = self.test.draw(self.money)
+        self.money -= money_spent
+        self.IncreaseDPS(dps_increase)
 
 def main():
     game = Game()
