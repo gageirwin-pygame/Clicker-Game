@@ -151,31 +151,52 @@ class Game():
         self.money -= money_spent
         self.IncreaseDPS(dps_increase)
             
+class Button():
 
+    def __init__(self, x, y) -> None:
+        self.button_rect = pygame.Rect(x, y, 50, 50)
+        self.clicked = False
+
+    def draw(self):
+        pygame.draw.rect(screen, BLACK, self.button_rect, border_radius=10)
+        action = 0
+        if self.button_rect.collidepoint(pygame.mouse.get_pos()):
+            self.hovered = True
+            if pygame.mouse.get_pressed()[0] and self.clicked == False:
+                self.clicked = True
+                action = 1
+        else:
+            self.hovered = False
+        if not pygame.mouse.get_pressed()[0]:
+            self.clicked = False
+        return action
 
 class Book():
 
     def __init__(self):
         self.current_page = 0
+        self.nextbutton = Button(570, 880)
+        self.prevbutton = Button(100, 880)
         self.pages = [
-            Page(1, [("Super Clicks", 1_000, 100),("Super Duper Clicks", 10_000, 1_000),("Ultra Clicks", 100_000, 10_000),("God Clicks", 1_000_000, 100_000),("Secret Clicks", 100_000_000, 1_000)])
+            Page(1, [("Water Ball", 1_000, 10),("Ice Ball", 10_000, 15),("Fire Ball", 100_000, 20),("Thunder Bolt", 1_000_000, 30),("Wind Blast", 100_000_000, 40)]),
+            Page(2, [("Rock Throw", 1_000, 100),("Heaven's Light", 10_000, 1_000),("Shadow Ball", 100_000, 10_000),("Water Spear", 1_000_000, 100_000),("Ice Spear", 100_000_000, 1_000)]),
+            Page(3, [("Rock Throw", 1_000, 100),("Heaven's Light", 10_000, 1_000),("Shadow Ball", 100_000, 10_000),("Water Spear", 1_000_000, 100_000),("Ice Spear", 100_000_000, 1_000)])
         ]
-
 
     def draw(self, money):
         money_spent, dps_increase = self.pages[self.current_page].draw(money)
-        # next and last buttons
-        # nextbutton = Button()
-        # if self.current_page+1 < len(self.pages):
-        #     action = nextbutton.draw()
-        #     if action:
-        #         self.current_page += 1
+        
+        if self.current_page+1 < len(self.pages):
+            action = self.nextbutton.draw()
+            if action:
+                self.current_page += 1
 
-        # prevbutton = Button()
-        # if self.current_page-1 >= 0:
-        #     action = prevbutton.draw()
-        #     if action:
-        #         self.current_page -= 1
+
+        if self.current_page-1 >= 0:
+            action = self.prevbutton.draw()
+            if action:
+                self.current_page -= 1
+
         return(money_spent, dps_increase)
 
 class Page():
